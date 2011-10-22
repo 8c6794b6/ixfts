@@ -1,0 +1,41 @@
+name:		ixfts
+version:	0.0.1
+synopsis:       simple full text search
+author:         8c6794b6
+maintainer:     8c6794b6@gmail.com
+cabal-version:  >= 1.9.2
+build-type:     Simple
+license:        BSD3
+license-file:   LICENSE
+category:       GUI
+stability:      experimental
+description:
+  Simple indexer and web ui for full text search of html files.
+
+source-repository head
+  type: git
+  location: http://github.com/8c6794b6/ixfts
+
+executable ixfts
+  ghc-options:
+    -Wall -fno-warn-unused-do-bind
+  main-is:
+    ixfts.hs
+  build-depends:
+    acid-state >= 0.4.3,
+    base == 4.*,
+    blaze-html >= 0.4.2.0,
+    bytestring -any,
+    cereal,
+    cmdargs >= 0.7,
+    containers -any,
+    filepath -any,
+    filemanip,
+    happstack-server >= 6.2.4,
+    iteratee,
+    ixset >= 1.0.1,
+    parallel >= 3.0.0,
+    mtl >= 2.0.0,
+    safecopy >= 0.5.1,
+    tagsoup,
+    text
