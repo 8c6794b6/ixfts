@@ -92,23 +92,17 @@ instance Indexable Document where
     , ixFun (map Word . nub . mkChunks . unContents . docContents) ]
 
 mkChunks :: Text -> [Text]
-mkChunks = T.split (`elem` "\t\n.,!?&()[]{}<>;/\"'")
-  -- T.split (maybe False (const True) . T.find (`elem` "\t\n.,!?&()[]{}<>;/\"'"))
--- mkChunks = C8.splitWith (`elem` " \t\n.,!?&()[]{}<>;/\"'")
+mkChunks = T.split (`elem` " \t\n.,!?&()[]{}<>;/\"'")
 
 $(deriveSafeCopy 0 'base ''Document)
 $(deriveSafeCopy 0 'base ''DocPath)
 $(deriveSafeCopy 0 'base ''Contents)
-
--- $(deriveSafeCopy 0 'primitive ''Array)
+$(deriveSafeCopy 0 'base ''Word)
+$(deriveSafeCopy 0 'base ''DocDB)
   
--- $(deriveSafeCopy 0 'base ''Text)
 instance SafeCopy Text where
   getCopy = contain (T.decodeUtf8 `fmap` Srl.get) 
   putCopy = contain . Srl.put . T.encodeUtf8
-  
-$(deriveSafeCopy 0 'base ''Word)
-$(deriveSafeCopy 0 'base ''DocDB)
 
 saveDoc :: IxSet Document -> Update DocDB ()
 saveDoc ixs = put (DocDB ixs)
@@ -150,7 +144,6 @@ mkDocument cond f root = foldM go empty =<< find always cond root where
         ws = mkChunks contents
         dm = foldr (\w m -> M.insertWith (+) w 1 m) M.empty ws
         document = Document dp (length ws) dm dc
-    putStrLn $ "docPath is: " ++ unDocPath dp
     return $! document `par` (acc `pseq` insert document acc)
 
 work :: FilePath -> IO String
