@@ -30,7 +30,6 @@ import Prelude hiding ((.),id,div,head)
 import Control.Category
 import Control.Parallel
 import Control.Monad
-import Data.ByteString (ByteString)
 import Data.Char (toLower)
 import Data.List hiding (head,insert,find)
 import Data.Map (Map)
@@ -53,11 +52,8 @@ import Text.Blaze.Html5.Attributes hiding
   (dir,id,title,form,style,span,size,summary)
 import Text.HTML.TagSoup (Tag(..), (~==), innerText, parseTags, sections)
 
-import qualified Data.ByteString.Char8 as C8
 import qualified Data.Map as M
-import qualified Data.Serialize as Srl
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Happstack.Server as H
 import qualified Text.Blaze.Html5.Attributes as A
 
@@ -100,10 +96,6 @@ $(deriveSafeCopy 0 'base ''Contents)
 $(deriveSafeCopy 0 'base ''Word)
 $(deriveSafeCopy 0 'base ''DocDB)
   
-instance SafeCopy Text where
-  getCopy = contain (T.decodeUtf8 `fmap` Srl.get) 
-  putCopy = contain . Srl.put . T.encodeUtf8
-
 saveDoc :: IxSet Document -> Update DocDB ()
 saveDoc ixs = put (DocDB ixs)
 
@@ -225,8 +217,7 @@ inputForm val =
           type_ (toValue "text") !
           name (toValue "q") !
           A.size (toValue "40") !
-          value (toValue val) {- !
-          autofocus (toValue "autofocus") -}
+          value (toValue val)
         input !
           type_ (toValue "submit") !
           value (toValue "search")

@@ -33,7 +33,7 @@ executable ixfts
     filemanip,
     happstack-server >= 6.2.4,
     iteratee,
-    ixset >= 1.0.1,
+    ixset >= 1.0.2,
     parallel >= 3.0.0,
     mtl >= 2.0.0,
     safecopy >= 0.5.1,
