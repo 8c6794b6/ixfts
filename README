@@ -1,0 +1,8 @@
+Simple, minimalistic full text indexer and searching web ui for html files,
+using ixset and happstack.
+
+After compiling with 'cabal configure && cabal build', invoke 'ixfts':
+
+     $ ixfts --help
+
+to get brief help for usage. Currently does not support unicode.
