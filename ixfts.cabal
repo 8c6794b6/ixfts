@@ -22,7 +22,7 @@ executable ixfts
   main-is:
     ixfts.hs
   build-depends:
-    acid-state >= 0.4.3,
+    acid-state >= 0.6.0,
     base == 4.*,
     blaze-html >= 0.4.2.0,
     bytestring -any,

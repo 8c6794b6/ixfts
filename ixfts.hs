@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-|
-
 Module      : $Header$
 CopyRight   : (c) 8c6794b6
 License     : BSD3
@@ -106,7 +105,7 @@ $(makeAcidic ''DocDB ['saveDoc, 'loadDoc])
 
 getDB :: FilePath -> IO DocDB
 getDB filepath = do
-  acid <- openAcidStateFrom filepath (DocDB empty)
+  acid <- openLocalStateFrom filepath (DocDB empty)
   query acid LoadDoc
 
 ------------------------------------------------------------------------------
@@ -114,7 +113,7 @@ getDB filepath = do
 
 index :: FilePath -> Maybe String -> FilePath -> IO ()
 index root extn outpath = do
-  acid <- openAcidStateFrom outpath (DocDB empty)
+  acid <- openLocalStateFrom outpath (DocDB empty)
   let mkIx = case extn of
         Just e | "html" `isSuffixOf` e -> mkHtmlDocument
                | otherwise             ->
@@ -177,7 +176,7 @@ searchPage docdb = do
           body $ do
             div ! class_ (toValue "wrapper") $ inputForm ""
     Right qs' -> do
-      let res = docIx docdb @* (map Word . T.words . T.pack $ qs')
+      let res = docIx docdb @* (map Word . T.words . T.pack $ map toLower qs')
       ok $ toResponse $ do
         preEscapedString "<!doctype html>"
         html $ do
