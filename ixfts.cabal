@@ -16,9 +16,20 @@ source-repository head
   type: git
   location: http://github.com/8c6794b6/ixfts
 
+flag static
+  description:
+    Add static option to GHC
+  default:
+    False
+
 executable ixfts
-  ghc-options:
-    -Wall -fno-warn-unused-do-bind
+  if flag(static)
+    ghc-options:
+      -Wall -fno-warn-unused-do-bind -rtsopts -threaded
+      -optl-pthread -optl-static
+  else
+    ghc-options:
+      -Wall -fno-warn-unused-do-bind -rtsopts -threaded
   main-is:
     ixfts.hs
   build-depends:
@@ -38,4 +49,5 @@ executable ixfts
     mtl >= 2.0.0,
     safecopy >= 0.5.1,
     tagsoup,
+    time >= 1.2.0.3,
     text

@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BangPatterns #-}
 {-|
 Module      : $Header$
 CopyRight   : (c) 8c6794b6
@@ -33,10 +34,13 @@ import Data.Char (toLower)
 import Data.List hiding (head,insert,find)
 import Data.Map (Map)
 import Data.Ord
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import System.FilePath
+import Text.Printf (printf)
 
-import Control.Monad.State (put)
 import Control.Monad.Reader (ask)
+import Control.Monad.State (put)
+import Control.Monad.Trans (liftIO)
 import Data.Acid
 import Data.Iteratee (run, stream2stream)
 import Data.Iteratee.IO (enumFile)
@@ -48,7 +52,7 @@ import System.Console.CmdArgs hiding (name)
 import System.FilePath.Find
 import Text.Blaze.Html5 hiding (base,map,summary)
 import Text.Blaze.Html5.Attributes hiding
-  (dir,id,title,form,style,span,size,summary)
+  (dir,id,title,form,style,span,size,start,summary)
 import Text.HTML.TagSoup (Tag(..), (~==), innerText, parseTags, sections)
 
 import qualified Data.Map as M
@@ -89,19 +93,19 @@ instance Indexable Document where
 mkChunks :: Text -> [Text]
 mkChunks = T.split (`elem` " \t\n.,!?&()[]{}<>;/\"'")
 
-$(deriveSafeCopy 0 'base ''Document)
-$(deriveSafeCopy 0 'base ''DocPath)
-$(deriveSafeCopy 0 'base ''Contents)
-$(deriveSafeCopy 0 'base ''Word)
-$(deriveSafeCopy 0 'base ''DocDB)
-  
+deriveSafeCopy 0 'base ''Document
+deriveSafeCopy 0 'base ''DocPath
+deriveSafeCopy 0 'base ''Contents
+deriveSafeCopy 0 'base ''Word
+deriveSafeCopy 0 'base ''DocDB
+
 saveDoc :: IxSet Document -> Update DocDB ()
 saveDoc ixs = put (DocDB ixs)
 
 loadDoc :: Query DocDB DocDB
 loadDoc = ask
 
-$(makeAcidic ''DocDB ['saveDoc, 'loadDoc])
+makeAcidic ''DocDB ['saveDoc, 'loadDoc]
 
 getDB :: FilePath -> IO DocDB
 getDB filepath = do
@@ -157,7 +161,9 @@ serve :: Int -> FilePath -> DocDB -> IO ()
 serve portnum stt docdb = do
   putStrLn $ "Starting server with port: " ++ show portnum
   simpleHTTP nullConf {H.port=portnum} $ msum
-    [ dir "favicon.ico" $ notFound $ toResponse ()
+    [ dir "favicon.ico" $
+        serveFile (asContentType "http://image/vnd.microsoft.icon")
+        "favicon.ico"
     , dir "static" $ serveDirectory EnableBrowsing [] stt
     , searchPage docdb
     , seeOther "" $ toResponse () ]
@@ -170,26 +176,32 @@ searchPage docdb = do
       ok $ toResponse $ do
         preEscapedString "<!doctype html>"
         html $ do
-          head $ do
-            title $ toHtml "ixset search"
-            css
+          headWithTitle "ixfts - home"
           body $ do
             div ! class_ (toValue "wrapper") $ inputForm ""
     Right qs' -> do
-      let res = docIx docdb @* (map Word . T.words . T.pack $ map toLower qs')
+      start <- liftIO getPOSIXTime
+      -- let res = docIx docdb @* (map Word . T.words . T.pack $ map toLower qs')
+      !res <- do
+        let r = docIx docdb @* (map Word .  T.words . T.pack $ map toLower qs')
+        r `seq` return r
+      end <- liftIO getPOSIXTime
+      let diff = 1000 * realToFrac (end-start) :: Double
       ok $ toResponse $ do
         preEscapedString "<!doctype html>"
         html $ do
-          head $ do
-            title $ toHtml $ "search result for " ++ qs'
-            css
+          headWithTitle $ "ixfts - search result for '" ++ qs' ++ "'"
           body $ do
             div ! class_ (toValue "wrapper") $ do
               inputForm qs'
               div ! class_ (toValue "summary") $ toHtml $
                 "search result for: \"" ++ qs' ++ "\", " ++
-                "hit: " ++ show (size res) ++ ""
+                "hit: " ++ show (size res) ++
+                " (" ++ printf "%0.4f ms" diff ++ ")"
               ul $ mapM_ mkLink $ sortBy (comparing $ score qs') $ toList res
+
+headWithTitle :: String -> Html
+headWithTitle str = head $ title (toHtml str) >> favicon >> css
 
 score :: String -> Document -> Double
 score ws document = foldr f 0 (T.words $ T.pack ws) where
@@ -230,6 +242,13 @@ css = style ! type_ (toValue "text/css") $ toHtml
 \div.wrapper ul li { margin: 5px 0 } \
 \div.wrapper ul li a { text-decoration: none; } \
 \div.summary { font-size: 75%; padding-left: 20px; }"
+
+favicon :: Html
+favicon =
+  link !
+    rel (toValue "shortcut icon") !
+    type_ (toValue "image/vnd.microsoft.icon") !
+    href (toValue "/favicon.ico")
 
 ------------------------------------------------------------------------------
 -- CLI
