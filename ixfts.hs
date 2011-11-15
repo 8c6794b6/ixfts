@@ -25,13 +25,14 @@ contents of html document would be stored in database for searching.
 -}
 module Main where
 
-import Prelude hiding ((.),id,div,head)
+import Prelude hiding ((.),id,div,head,span)
 
 import Control.Category
+import Control.Exception (evaluate)
 import Control.Parallel
 import Control.Monad
 import Data.Char (toLower)
-import Data.List hiding (head,insert,find)
+import Data.List hiding (head,insert,find,span)
 import Data.Map (Map)
 import Data.Ord
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -178,21 +179,21 @@ searchPage docdb = do
         html $ do
           headWithTitle "ixfts - home"
           body $ do
-            div ! class_ (toValue "wrapper") $ inputForm ""
+            div ! class_ (toValue "wrapper") $ (about >> inputForm "")
     Right qs' -> do
-      start <- liftIO getPOSIXTime
-      -- let res = docIx docdb @* (map Word . T.words . T.pack $ map toLower qs')
-      !res <- do
-        let r = docIx docdb @* (map Word .  T.words . T.pack $ map toLower qs')
-        r `seq` return r
-      end <- liftIO getPOSIXTime
-      let diff = 1000 * realToFrac (end-start) :: Double
+      (diff,res) <- liftIO $ do
+        start <- getPOSIXTime
+        ix <- evaluate $
+          docIx docdb @* (map Word .  T.words . T.pack $ map toLower qs')
+        end <- getPOSIXTime
+        return (1000 * realToFrac (end-start) :: Double, ix)
       ok $ toResponse $ do
         preEscapedString "<!doctype html>"
         html $ do
           headWithTitle $ "ixfts - search result for '" ++ qs' ++ "'"
           body $ do
             div ! class_ (toValue "wrapper") $ do
+              about
               inputForm qs'
               div ! class_ (toValue "summary") $ toHtml $
                 "search result for: \"" ++ qs' ++ "\", " ++
@@ -232,15 +233,21 @@ inputForm val =
         input !
           type_ (toValue "submit") !
           value (toValue "search")
+        a !
+          class_ (toValue "src") !
+          href (toValue "https://github.com/8c6794b6/ixfts") $ toHtml "src"
 
 css :: Html
 css = style ! type_ (toValue "text/css") $ toHtml
  "body { font-size: 15px; } \
 \input { margin: 5px; border: 1px solid #868686; }\
 \div.wrapper { padding: 20px; } \
+\div.wrapper div.about {padding-left: 8px}\
+\div.wrapper div.about span.desc {font-size: 75%}\
 \div.wrapper ul { list-style: none; padding-left: 10px; } \
 \div.wrapper ul li { margin: 5px 0 } \
 \div.wrapper ul li a { text-decoration: none; } \
+\div.wrapper a.src {font-size: 75%}\
 \div.summary { font-size: 75%; padding-left: 20px; }"
 
 favicon :: Html
@@ -249,6 +256,12 @@ favicon =
     rel (toValue "shortcut icon") !
     type_ (toValue "image/vnd.microsoft.icon") !
     href (toValue "/favicon.ico")
+
+about :: Html
+about = div ! class_ (toValue "about") $ do
+  toHtml "ixfts "
+  span ! class_ (toValue "desc") $ toHtml "- minimalistic html search"
+
 
 ------------------------------------------------------------------------------
 -- CLI
